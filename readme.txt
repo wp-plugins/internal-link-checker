@@ -3,7 +3,7 @@ Plugin Name:		Internal Link Checker
 Plugin URI:			https://github.com/franz-josef-kaiser/Internal-Link-Check
 Author:				Franz Josef Kaiser
 Author URI:			https://github.com/franz-josef-kaiser
-Tags:				wptouch, iphone, ipod, theme, apple, mac, bravenewcode, ajax, mobile, android, blackberry, smartphone, 
+Tags:				admin, link, links, meta, box, meta_box, missing, 404 
 Requires at least:	0.x
 Tested up to:		3.1.1
 Stable tag:			0.1.3.
