@@ -8,6 +8,7 @@ Requires at least:	0.x
 Tested up to:		3.1.1
 Stable tag:			0.1.3.
 
+== Description ==
 = Internal Link Checker =
 
 Adds a meta box to the post edit screen that shows all internal links from other posts to the currently displayed post. This way you can easily check if you should fix links before deleting a post. There are no options needed. The plugin works out of the box.
