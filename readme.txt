@@ -6,7 +6,7 @@ Author URI:			https://plus.google.com/u/0/107110219316412982437
 Tags:				admin, link, links, meta, box, meta_box, missing, blogroll, broken, maintenance, posts, 404
 Requires at least:	3.1
 Tested up to:		3.3
-Stable tag:			0.5
+Stable tag:			0.3
 
 == Description ==
 = Internal Link Checker =
@@ -133,9 +133,3 @@ The meta box content filter disappeared and was replaced by an action to overrid
 
 = v0.3 =
 Final stable release with new WP Admin Tables class API in use. Typo & Language fixes, fully translated
-
-= v0.4 =
-Now supports pagination for the meta box to take less space in the UI in cases where there are more than just a few links
-
-= v0.5 =
-Now supports sorting by column
