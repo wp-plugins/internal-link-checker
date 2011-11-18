@@ -3,20 +3,21 @@ Plugin Name:		Internal Link Checker
 Plugin URI:			https://github.com/franz-josef-kaiser/Internal-Link-Check
 Author:				Franz Josef Kaiser, Patrick Matsumura
 Author URI:			https://plus.google.com/u/0/107110219316412982437
-Tags:				admin, link, links, meta, box, meta_box, missing, 404 
-Requires at least:	0.x
+Tags:				admin, link, links, meta, box, meta_box, missing, blogroll, broken, maintenance, posts, 404
+Requires at least:	3.1
 Tested up to:		3.3
-Stable tag:			0.3
+Stable tag:			0.5
 
 == Description ==
 = Internal Link Checker =
 
-Adds a meta box to the post edit screen that shows all internal links from other posts to the currently displayed post. This way you can easily check if you should fix links before deleting a post. There are no options needed. The plugin works out of the box.
+Adds a meta box to the post edit screen that shows all internal links from other posts to the currently displayed post. The plugin works out of the box.
 
 
 == Installation ==
 
 No explanation needed - works out of the box. Just activate and be safe.
+
 
 == Frequently Asked Questions ==
 
@@ -55,6 +56,11 @@ If you want to help translating, please contact me on G+.
 
 Included:
 EN/DE (Patrick Matsumura)
+
+== Screenshots ==
+
+1. meta box in post edit admin UI screen
+
 
 == Changelog ==
 
@@ -126,8 +132,10 @@ Check for remote readme file availibility before get file contents on update
 The meta box content filter disappeared and was replaced by an action to override the content
 
 = v0.3 =
-Final stable release with new WP Admin Tables class API in use. Typo & Language fixes, fully translated.
+Final stable release with new WP Admin Tables class API in use. Typo & Language fixes, fully translated
 
-== Screenshots ==
+= v0.4 =
+Now supports pagination for the meta box to take less space in the UI in cases where there are more than just a few links
 
-1. meta box in post edit admin UI screen
+= v0.5 =
+Now supports sorting by column
