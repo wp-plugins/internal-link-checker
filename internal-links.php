@@ -1,165 +1,199 @@
 <?php
+! defined( 'ABSPATH' ) AND exit;
 /*
-Plugin Name:	Internal links check
-Plugin URI:		https://github.com/franz-josef-kaiser/Internal-Link-Check
-Description:	Adds a meta box to the post edit screen that shows all internal links from other posts to the currently displayed post. This way you can easily check if you should fix links before deleting a post. There are no options needed. The plugin works out of the box.
-Author:			Franz Josef Kaiser, Patrick Matsumura
-Author URI: 	https://plus.google.com/u/0/107110219316412982437
-Version:		0.3
-Text Domain:	ilc
-License:		GPL v2 - http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+Plugin Name: Internal links check
+Plugin URI:  https://github.com/franz-josef-kaiser/Internal-Link-Check
+Description: Adds a meta box to the post edit screen that shows all internal links from other posts to the currently displayed post. This way you can easily check if you should fix links before deleting a post. There are no options needed. The plugin works out of the box.
+Author:      Franz Josef Kaiser, Patrick Matsumura
+Author URI:  https://unserkaiser.com
+Version:     0.6.1
+Text Domain: ilc
+License:     GPL v2 @link http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
-	(c) Copyright 2010 - 2011 by Franz Josef Kaiser <mailto: office@unserkaiser.com>
+	(c) Copyright 2010 - 2012 by Franz Josef Kaiser <mailto: office (a) unserkaiser.com>
 
-	This program is free software; you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation; either version 2 of the License, or
-	(at your option) any later version.
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
 
 	This program is distributed in the hope that it will be useful,
 	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 	GNU General Public License for more details.
 
 	You should have received a copy of the GNU General Public License
 	along with this program; if not, write to the Free Software
-	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-// Secure: don't allow to load this file directly
-if( ! class_exists( 'WP' ) ) 
-{
-	header( 'Status: 403 Forbidden' );
-	header( 'HTTP/1.1 403 Forbidden' );
-	exit;
-}
 
-
-
-// init class
-add_action( 'init', array( 'ilcInit', 'init' ) );
 
 if ( ! class_exists( 'ilcInit' ) )
 {
+	// init class
+	add_action( 'admin_init', array( 'ilcInit', 'init' ), 0 );
 
 /**
  * Factory
- * @author Franz Josef Kaiser
  * 
- * translation tutorial
- * @link http://wordpress.stackexchange.com/questions/33312/how-to-translate-plural-forms-for-themes-plugins-with-poedit/33314#33314
+ * @author     Franz Josef Kaiser <wecodemore@gmail.com>
+ * @copyright  © Franz Josef Kaiser 2012
+ * 
+ * @since      0.1
+ * 
+ * @package    WordPress
+ * @subpackage Internal Link Checker bootstrap
+ * 
+ * @license    GNU GPL 2
  */
 class ilcInit
 {
 	/**
-	 * Plugin Base directory
-	 * @var (string)
+	 * Instance
+	 * 
+	 * @access protected
+	 * @var    object
 	 */
-	public static $dir;
+	static protected $instance;
 
-	/**
-	 * Relative Path from plugin root dir
-	 * @var (string)
-	 */
-	public static $rel_path;
 
 	/**
 	 * Used for update notices
 	 * Fetches the readme file from the official plugin repo trunk.
 	 * Adds to the "in_plugin_update_message-$file" hook
-	 * @var (string)
+	 * 
+	 * @access public
+	 * @var    string
 	 */
 	public $remote_readme = 'http://plugins.trac.wordpress.org/browser/internal-link-checker/trunk/readme.txt?format=txt';
 
-	/**
-	 * Settings
-	 * @var (array)
-	 */
-	public $args = array(
-		 'element'			=> 'li'
-		,'element_class'	=> ''
-		 // Att.: <ol> will be auto converted to <ul> 
-		,'container'		=> ''
-		,'container_class'	=> ''
-		,'nofollow'			=> false
-		,'echo'				=> true
-	);
 
 	/**
-	 * Container for sql result
-	 * @var (array)
+	 * Settings
+	 * 
+	 * @since  0.2.2
+	 * @access public
+	 * @var    array
+	 */
+	public $args = array(
+		 'element'         => 'li'
+		,'element_class'   => ''
+		 // Att.: <ol> will be auto converted to <ul> 
+		,'container'       => ''
+		,'container_class' => ''
+		,'nofollow'        => false
+		,'echo'            => true
+	);
+
+
+	/**
+	 * Container for SQL result
+	 * 
+	 * @since  0.2
+	 * @access public
+	 * @var    array
 	 */
 	public $sql_results;
+
+
+	/**
+	 * Sets the meta box name
+	 * Used to determin in the extended WP_List_Table class
+	 * in which context the meta box is. 
+	 * Needed to determine if the whole UI should be shown
+	 * 
+	 * @since  0.6
+	 * @access public
+	 * @var    unknown_type
+	 */
+	public $meta_box_name = 'link-check';
 
 
 	/**
 	 * Init
 	 * Instantiates the class and loads translation files
 	 * 
+	 * @since  0.2
 	 * @return void
 	 */
 	static public function init()
 	{
-		$class = __CLASS__ ;
-
-		// Class available in global scope
-		if ( empty ( $GLOBALS[ $class ] ) )
-			$GLOBALS[ $class ] = new $class;
-
-		// l10n translation files
-		$dir		= basename( dirname( __FILE__ ) );
-		// in plugins directory
-		$l10n_file	= load_plugin_textdomain( 'ilc', false, "{$dir}/lang" );
-		// in mu-plugins directory
-		if ( ! $l10n_file )
-			load_muplugin_textdomain( 'ilc', "{$dir}/lang" );
+		null === self :: $instance AND self :: $instance = new self;
+		return self :: $instance;
 	}
 
 
 	/**
 	 * Constructor
 	 * 
+	 * @since  0.2
 	 * @return void
 	 */
 	public function __construct()
 	{
-		# >>>> Class vars
-		$this->dir			= plugin_dir_path( __FILE__ );
-		$this->rel_path		= basename( dirname( __FILE__ ) );
-		# <<<< Class vars
+		global $pagenow;
+
+		// Load translation file
+		add_action( 'admin_init', array( $this, 'load_textdomain' ) );
 
 		if ( is_admin() )
 		{
-			global $pagenow;
+			// Better update message
 			if ( 'plugins.php' === $pagenow )
 			{
-				// Better update message
-				$file	= basename( __FILE__ );
-				$folder	= basename( dirname( __FILE__ ) );
-				$hook = "in_plugin_update_message-{$folder}/{$file}";
-				add_action( $hook, array( &$this, 'update_message' ), 20, 2 );
+				$hook  = "in_plugin_update_message-";
+				$hook .= basename( __FILE__ )."/";
+				$hook .= basename( dirname( __FILE__ ) );
+				add_action( $hook, array( $this, 'update_message' ), 20, 2 );
 			}
 			// avoid loading on every admin $_REQUEST
 			// abort if not on post.php (post/page/cpt edit/new) screens
 			elseif ( 'post.php' === $pagenow )
 			{
-				add_action( 'admin_init',		array( &$this, 'load_extensions' ) );
-				add_action( 'add_meta_boxes',	array( &$this, 'add_meta_box' ) );
+				add_action( 'admin_init',     array( $this, 'load_extensions' ) );
+				add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ) );
 			}
 		}
+	}
+
+	/**
+	 * Load plugin translation
+	 *
+	 * @link   http://wordpress.stackexchange.com/a/33314 Translation Tutorial by the author
+	 * @return void
+	 */
+	static function load_textdomain() 
+	{
+		global $locale;
+
+		// l18n translation files
+		$dir    = plugin_dir_path( __FILE__ );
+		$domain = 'ilc';
+
+		// in themes/plugins/mu-plugins directory
+		load_textdomain( 
+			 $domain
+			,"{$dir}lang/{$domain}-{$locale}.mo"
+		);
 	}
 
 
 	/**
 	 * Extension/File/Class loader
 	 * 
+	 * @since  0.2.7
 	 * @return void
 	 */
 	public function load_extensions()
 	{
-		foreach ( array( 'admin_table' ) as $extension )
+		$files = array( 
+			 'admin_table' 
+		);
+
+		foreach ( $files as $extension )
 		{
-			$file = "{$this->dir}/{$extension}.php";
+			$file = plugin_dir_path( __FILE__ )."/{$extension}.php";
 			if ( is_readable( $file ) )
 				include_once $file;
 		}
@@ -169,40 +203,75 @@ class ilcInit
 	/**
 	 * Plugin Header Comment data
 	 *
+	 * @since  0.2.8
 	 * @uses   get_plugin_data
-	 * @param (string) $value | default = 'Version'; Valid: see Header Comment Block
-	 * @return (string) 
+	 * @param  string $value default = 'Version'; Valid: see Header Comment Block
+	 * @return string $data
 	 */
-	private function get_plugin_data( $value = 'Version' ) 
+	static private function get_plugin_data( $value = 'Version', $mark_up = true ) 
 	{
-		$plugin_data = get_plugin_data( __FILE__ );
-		return $plugin_data[ $value ];
+		$data = get_plugin_data( __FILE__, $mark_up );
+		return $data[ $value ];
 	}
 
 
 	/**
-	 * Wrapper for get_plugin_data()
+	 * SQL Query
+	 * Adds content to two class vars: The resulting array & the counter
 	 * 
-	 * @return (string) $textdomain
+	 * @since  0.2
+	 * @return object $links 
 	 */
-	public function get_textdomain() 
+	public function get_sql_results()
 	{
-		return $this->get_plugin_data( 'TextDomain' );
+		global $wpdb;
+
+		// get_permalink() cares about rewrite rules
+		$current_link = get_permalink( $GLOBALS['post']->ID );
+		// SQL: newest first
+		$sql_results = $wpdb->get_results( 
+			 $wpdb->prepare( "
+				SELECT ID, post_title, post_date, post_content, post_type 
+					FROM %s
+				WHERE post_content 
+					LIKE %s
+				ORDER BY %s %s
+			 " )
+			,"{$wpdb->prefix}posts"
+			,'%'.like_escape( $current_link ).'%'
+			,$this->orderby
+			,$this->order
+		);
+
+		return $sql_results;
+	}
+
+
+	/**
+	 * Wrapper to return the sql results for the admin table class
+	 * 
+	 * @since  0.2.7
+	 * @see    WP_List_Table::prepare_items()
+	 * @return array $sql_results
+	 */
+	public function the_sql_results()
+	{
+		return isset( $this->sql_results ) ? $this->sql_results : self :: get_sql_results();
 	}
 
 	
 	/**
 	 * Adds the meta box to the post edit screen
 	 *
+	 * @since  0.2
 	 * @return void
 	 */
 	public function add_meta_box()
 	{
-		// add meta box
 		add_meta_box( 
-			 'link-check'
-			,__( 'Internal Links', $this->get_textdomain() )
-			,array( &$this, 'load_table' )
+			 $this->meta_box_name
+			,__( 'Internal Links', 'ilc' )
+			,array( $this, 'load_table' )
 			,'post' 
 		);
 	}
@@ -212,94 +281,41 @@ class ilcInit
 	 * Adds a native admin UI table
 	 * Callback fn for add_meta_box()
 	 * 
+	 * @since  0.2 | renamed from meta_box_cb()
 	 * @return void
 	 */
 	public function load_table()
 	{
 		// Action: Overrides the content of the meta box
 		if ( has_action( 'internal_links_meta_box' ) )
-		{
-			do_action( 'internal_links_meta_box', $this->the_sql_results() );
-			return;
-		}
+			return do_action( 'internal_links_meta_box', $this->the_sql_results() );
 
 		// Display table
-		$table = new ilcTable();
-		$table->prepare_items();
-		$table->display();
-
-		# @todo temp until table nav in place
-		echo '<br class="clear" />';
-
-		// Display number of posts
-		# $count = count( $GLOBALS['wpdb']->last_result );
-		$count = count( $this->the_sql_results() );
-		printf( 
-			 _n(
-				 'One post linking to this post.'
-				,'Posts linking to this post: %s'
-				,$count
-				,$this->get_textdomain() 
-			 )
-			,zeroise( number_format_i18n( $count ), 2 )
-		);
-	}
-
-
-	/**
-	 * SQL Query
-	 * Adds content to two class vars: The resulting array & the counter
-	 * 
-	 * @return (object) $links 
-	 */
-	public function get_sql_results()
-	{
-		// get_permalink() cares about rewrite rules
-		$current_link = get_permalink( $GLOBALS['post']->ID );
-		// SQL: newest first
-		return $GLOBALS['wpdb']->get_results( "
-			SELECT ID, post_title, post_date, post_content, post_type 
-			FROM {$GLOBALS['wpdb']->prefix}posts 
-			WHERE post_content 
-			LIKE '%{$current_link}%' 
-			ORDER BY post_date DESC
-		" );
-	}
-
-
-	/**
-	 * Wrapper to return the sql results for the admin table class
-	 * 
-	 * @see WP_List_Table::prepare_items()
-	 * @return (array) $sql_results
-	 */
-	public function the_sql_results()
-	{
-		return isset( $this->sql_results ) ? $this->sql_results : self::get_sql_results();
+		new ilcTable( $this->meta_box_name );
 	}
 
 
 	/**
 	 * Builds the output
-	 * Also used as meta box callback function
 	 * 
-	 * @uses markup()
-	 * @return (string) $output
+	 * @since  0.2
+	 * @uses   markup()
+	 * @return string $output
 	 */
 	function output()
 	{
 		if ( ! $this->sql_results )
-			return _e( 'No posts are linking to this post.', $this->get_textdomain() );
+			return _e( 'No posts are linking to this post.', 'ilc' );
 
 		# >>>> build links array sorted by post type
 		$results = array();
 		foreach( $this->sql_results as $post )
 		{
-			$link		= get_permalink( $post->ID );
+			$link     = get_permalink( $post->ID );
 
 			// If no title was set: we care about it
-			$no_title	= __( 'No title set', $this->get_textdomain() );
-			$title		= $post->post_title ? $post->post_title : "<em>{$no_title}</em>";
+			$no_title = __( 'No title set', 'ilc' );
+			$title    = $post->post_title ? $post->post_title : "<em>{$no_title}</em>";
 
 			$results[ $post->post_type ][ $post->ID ] = "<a href='{$link}'>{$title}</a>";
 		}
@@ -311,7 +327,12 @@ class ilcInit
 		# >>>> markup
 		foreach ( $results as $name => $posts )
 		{
-			$name	 = _n( ucfirst( $name ), ucfirst( $name ).'s', count( $posts ), $this->get_textdomain() );
+			$name = _n(
+				 ucfirst( $name )
+				,ucfirst( $name ).'s'
+				,count( $posts )
+				,'ilc'
+			);
 			$output .= $this->markup( $posts );
 		}
 		# <<<< markup
@@ -327,22 +348,23 @@ class ilcInit
 	/**
 	 * Builds the markup
 	 * 
-	 * @uses markup_filter()
-	 * @param (array) $results | SQL Query results ordered
-	 * @return (string) $output | Html markup
+	 * @since  0.2
+	 * @uses   markup_filter()
+	 * @param  array $results SQL Query results ordered
+	 * @return string $output Html markup
 	 */
 	public function markup( $results )
 	{
 		$output = '';
 		foreach ( $results as $link )
 		{
-			$output .= "<%el%%el_class%>{$link}</%el%>";
+			$output .= "<%EL%%EL_CLASS%>{$link}</%EL%>";
 		}
 
 		// In case someone forgot to set a container if the choosen element is 'li'
-		if ( $this->args['container'] OR 'li' === $this->args['element'] )
+		if ( ! $this->args['container'] OR 'li' === $this->args['element'] )
 		{
-			$output  = "<%container%%container_class%>{$output}</%container%>";
+			$output  = "<%CONTAINER%%CONTAINER_CLASS%>{$output}</%CONTAINER%>";
 		}
 
 		$output = $this->markup_filter( $output );
@@ -355,24 +377,23 @@ class ilcInit
 	 * Replaces markup placeholders
 	 * Deletes placeholders if the settings array contains an empty string
 	 * 
-	 * @param (string) $input
-	 * @return (string) $markup
+	 * @since  0.2
+	 * @param  string $input
+	 * @return string $markup
 	 */
 	public function markup_filter( $input )
 	{
-		$markup = strtr( 
+		return strtr( 
 			 $input
 			,array(
-			 	 '%el%'					=> $this->args['element']
+			 	 '%EL%'              => $this->args['element']
 				 // auto correct wrong container types for <li> elements to <ul>
-				,'%container%'			=> 'li' === $this->args['element']	? 'ul' : $this->args['container']
-				,'%el_class%'			=> $this->args['element_class']		? " class='{$this->args['element_class']}'" : ''
-				,'%container_class%'	=> $this->args['container_class']	? " class='{$this->args['container_class']}'" : ''
-				,'%nofollow%'			=> $this->args['nofollow']			? ' rel="nofollow"' : ''
+				,'%CONTAINER%'       => 'li' === $this->args['element'] ? 'ul' : $this->args['container']
+				,'%EL_CLASS%'        => $this->args['element_class']    ? " class='{$this->args['element_class']}'" : ''
+				,'%CONTAINER_CLASS%' => $this->args['container_class']  ? " class='{$this->args['container_class']}'" : ''
+				,'%NOFOLLOW%'        => $this->args['nofollow']         ? ' rel="nofollow"' : ''
 			) 
 		);
-
-		return $markup;
 	}
 
 
@@ -383,9 +404,10 @@ class ilcInit
 	 * Displays an update message for plugin list screens.
 	 * Shows only the version updates from the current until the newest version
 	 * 
-	 * @param (array) $plugin_data
-	 * @param (object) $r
-	 * @return (string) $output
+	 * @since  0.2.8
+	 * @param  array  $plugin_data
+	 * @param  object $r
+	 * @return string $output
 	 */
 	public function update_message( $plugin_data, $r )
 	{
@@ -393,25 +415,27 @@ class ilcInit
 			return;
 
 		// readme contents
-		$data		= file_get_contents( $this->remote_readme );
-		$changelog	= stristr( $data, '== Changelog ==' );
-		$changelog	= stristr( $changelog, '== Screenshots ==', true );
+		$data      = file_get_contents( $this->remote_readme );
+		$changelog = stristr( $data, '== Changelog ==' );
+		$changelog = stristr( $changelog, '== Screenshots ==', true );
 		// only return for the current & later versions
-		$curr_ver	= $this->get_plugin_data();
-		$changelog	= stristr( $changelog, "= v{$curr_ver}" );
+		$curr_ver  = $this->get_plugin_data();
+		$changelog = stristr( $changelog, "= v{$curr_ver}" );
 
 		# >>>> output
 		$output  = '<hr /><div style="font-weight: normal;">';
 		$output .= sprintf( __( 
 				 'The Update from %1$s to %2$s brings you the following new features, bug fixes and additions.'
-				,$this->get_textdomain() )
+				,'ilc' )
 			,$curr_ver
 			,$r->new_version 
 		);
 		$output .= "<pre>{$changelog}</pre>";
-		$output .= sprintf( __( 
+		$output .= sprintf( 
+			 __( 
 				 'You can also check the nightly builds of %1$sour development repository%2$s on GitHub. If you got ideas, feature request or want to help with pull requests, please feel free to do so on GitHub.%3$s'
-				,$this->get_textdomain() )
+				,'ilc'
+			 )
 			,'<a href="https://github.com/franz-josef-kaiser/Internal-Link-Check">'
 			,'</a>'
 			,'</div>'
